@@ -1,0 +1,77 @@
+# AI / ML / NLP Project Submission Template
+template_id: ai_ml_nlp
+template_version: 1.0.0
+project_type: ai_ml_nlp
+title: AI / ML / NLP Project Submission
+reference_example: "Sentiment Analysis for Brand Monitoring"
+
+# Submission rules
+limits:
+  max_zip_mb: 50
+  max_per_file_mb: 50
+  max_total_uncompressed_mb: 500
+  max_entries: 2000
+
+blocked_extensions: [exe, dll, so, bat, sh, cmd, msi, scr, com, app]
+
+# Required sections (order matches folder prefix)
+sections:
+  - id: problem_statement
+    path: 01_problem_statement.md
+    required: true
+    kind: text_md
+  - id: business_context
+    path: 02_business_context.md
+    required: true
+    kind: text_md
+  - id: data_source
+    path: 03_data_source.md
+    required: true
+    kind: text_md
+  - id: data_collection
+    path: 04_data_collection
+    required: true
+    kind: dir_or_link
+  - id: preprocessing
+    path: 05_preprocessing
+    required: true
+    kind: dir
+  - id: eda
+    path: 06_eda
+    required: true
+    kind: dir
+  - id: model_approach
+    path: 07_model_approach
+    required: true
+    kind: dir
+  - id: tool_justification
+    path: 08_tool_justification.md
+    required: true
+    kind: text_md
+  - id: code
+    path: 09_code
+    required: true
+    kind: code_dir_or_repo
+  - id: screenshots
+    path: 10_screenshots
+    required: true
+    kind: images
+    min_files: 3
+    allowed_ext: [png, jpg, jpeg, webp]
+  - id: output_demo
+    path: 11_output_demo
+    required: true
+    kind: dir_or_link
+  - id: report
+    path: 12_report
+    required: true
+    kind: file
+    allowed_ext: [pdf, docx]
+  - id: challenges
+    path: 13_challenges.md
+    required: true
+    kind: text_md
+  - id: reflection
+    path: 14_reflection.md
+    required: true
+    kind: text_md

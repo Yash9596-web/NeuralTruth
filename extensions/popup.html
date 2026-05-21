@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuralTruth</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 340px;
+      min-height: 420px;
+      background: #030712;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, rgba(0,85,255,0.25), rgba(179,71,255,0.2));
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #00aaff, #b347ff);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .header h1 { font-size: 15px; font-weight: 700; }
+    .header p  { font-size: 11px; color: #64748b; }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #00ff88;
+      margin-left: auto;
+      animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .tab {
+      flex: 1; padding: 9px; text-align: center;
+      font-size: 12px; font-weight: 500;
+      color: #64748b; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all .2s;
+    }
+    .tab.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+
+    /* Body */
+    .body { padding: 14px 16px; }
+
+    textarea, input[type=text] {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(0,212,255,0.15);
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 9px 11px;
+      font-size: 12px;
+      resize: none;
+      outline: none;
+      transition: border .2s;
+      font-family: inherit;
+    }
+    textarea:focus, input:focus { border-color: rgba(0,212,255,0.5); }
+    textarea::placeholder, input::placeholder { color: #475569; }
+
+    .btn-analyze {
+      width: 100%; margin-top: 10px;
+      background: linear-gradient(135deg, #0055ff, #00aaff);
+      border: none; border-radius: 8px;
+      color: white; font-weight: 600;
+      padding: 10px; cursor: pointer;
+      font-size: 13px; transition: opacity .2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Result */
+    .result { margin-top: 12px; }
+    .verdict-card {
+      border-radius: 10px; padding: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .verdict-card.fake { background: rgba(255,51,102,0.12); border: 1px solid rgba(255,51,102,0.3); }
+    .verdict-card.real { background: rgba(0,255,136,0.1);  border: 1px solid rgba(0,255,136,0.25); }
+    .verdict-label { font-size: 17px; font-weight: 800; }
+    .verdict-card.fake .verdict-label { color: #ff3366; }
+    .verdict-card.real .verdict-label { color: #00ff88; }
+    .confidence-ring {
+      font-size: 20px; font-weight: 800;
+      text-align: center; line-height: 1;
+    }
+    .conf-sub { font-size: 9px; color: #64748b; }
+
+    .risk-bar-wrap { margin-top: 10px; }
+    .risk-label { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 4px; }
+    .risk-bar { height: 5px; border-radius: 3px; background: linear-gradient(90deg, #00ff88, #ffcc00, #ff3366); }
+    .risk-marker { position: relative; }
+    .risk-marker::after {
+      content: '▲';
+      position: absolute;
+      font-size: 8px; color: #00d4ff;
+      top: 2px;
+      transition: left .5s;
+    }
+
+    .suspicious-section { margin-top: 10px; }
+    .suspicious-title { font-size: 11px; color: #f97316; font-weight: 600; margin-bottom: 6px; }
+    .suspicious-item {
+      background: rgba(255,51,102,0.08);
+      border: 1px solid rgba(255,51,102,0.2);
+      border-radius: 6px; padding: 7px 9px;
+      font-size: 11px; color: #cbd5e1; margin-bottom: 4px;
+    }
+
+    .loading {
+      display: flex; flex-direction: column;
+      align-items: center; padding: 24px; gap: 10px;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid rgba(0,212,255,0.2);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { font-size: 12px; color: #64748b; }
+
+    .error-box {
+      background: rgba(255,51,102,0.1);
+      border: 1px solid rgba(255,51,102,0.3);
+      border-radius: 8px; padding: 10px;
+      font-size: 12px; color: #ff6680; margin-top: 10px;
+    }
+
+    .footer {
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 8px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer a { font-size: 11px; color: #475569; text-decoration: none; }
+    .footer a:hover { color: #00d4ff; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <h1>NeuralTruth</h1>
+      <p>AI Fake News Detector</p>
+    </div>
+    <div class="status-dot" title="API Connected"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="page" id="tab-page">📄 This Page</div>
+    <div class="tab" data-tab="text" id="tab-text">📝 Custom Text</div>
+  </div>
+
+  <div class="body">
+    <!-- Page Tab -->
+    <div id="panel-page">
+      <p style="color:#64748b;font-size:12px;margin-bottom:10px;">Analyze the article on the currently active browser tab.</p>
+      <button class="btn-analyze" id="btn-page">⚡ Analyze This Page</button>
+    </div>
+
+    <!-- Text Tab -->
+    <div id="panel-text" style="display:none;">
+      <textarea id="custom-text" rows="5" placeholder="Paste article text or a claim here..."></textarea>
+      <button class="btn-analyze" id="btn-text">⚡ Analyze Text</button>
+    </div>
+
+    <!-- State: Loading -->
+    <div id="state-loading" class="loading" style="display:none;">
+      <div class="spinner"></div>
+      <p>Running BERT inference...</p>
+    </div>
+
+    <!-- State: Result -->
+    <div id="state-result" class="result" style="display:none;"></div>
+
+    <!-- State: Error -->
+    <div id="state-error" class="error-box" style="display:none;"></div>
+  </div>
+
+  <div class="footer">
+    <a href="http://localhost:3000" target="_blank">Open Dashboard</a>
+    <a href="http://localhost:8000/docs" target="_blank">API Docs</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

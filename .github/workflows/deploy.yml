@@ -1,0 +1,52 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          cd apps/backend
+          pip install -r requirements.txt
+          pip install pytest httpx
+      - name: Run Tests
+        run: |
+          pytest tests/test_api.py
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: |
+          cd apps/frontend
+          npm install
+      - name: Build Next.js
+        run: |
+          cd apps/frontend
+          npm run build
+
+  deploy-production:
+    needs: [test-backend, build-frontend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Vercel (Frontend)
+        run: echo "Vercel CLI deployment steps would run here"
+      - name: Deploy to Railway (Backend)
+        run: echo "Railway CLI deployment steps would run here"
