@@ -24,7 +24,7 @@ jobs:
           # Pre-install CPU-only PyTorch to save gigabytes of download and avoid timeouts in GitHub Actions
           pip install torch==2.1.0 --extra-index-url https://download.pytorch.org/whl/cpu
           pip install -r apps/backend/requirements.txt
-          pip install pytest httpx
+          pip install pytest httpx python-multipart
 
       - name: Run Tests
         run: |
