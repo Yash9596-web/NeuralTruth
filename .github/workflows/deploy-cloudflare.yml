@@ -33,7 +33,7 @@ jobs:
 
       - name: Deploy to Cloudflare Workers
         working-directory: apps/frontend
-        run: npx wrangler deploy
+        run: npx opennextjs-cloudflare deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
