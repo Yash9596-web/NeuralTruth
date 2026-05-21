@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cloudflare": "npx @opennextjs/cloudflare build",
+    "build:cloudflare": "npx opennextjs-cloudflare build",
     "deploy": "npx wrangler deploy",
     "preview": "npx wrangler dev"
   },
