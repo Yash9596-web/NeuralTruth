@@ -1,0 +1,10 @@
+#:schema node_modules/wrangler/config-schema.json
+
+name = "neuraltruth-frontend"
+main = ".open-next/worker.js"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets served from the .open-next/assets directory
+[assets]
+directory = ".open-next/assets"
