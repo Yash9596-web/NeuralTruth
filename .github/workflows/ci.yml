@@ -49,7 +49,7 @@ jobs:
       - name: Lint
         run: |
           cd apps/frontend
-          npx next lint
+          npm run lint
 
       - name: Build Next.js
         run: |
