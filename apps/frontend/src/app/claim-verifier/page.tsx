@@ -144,7 +144,7 @@ export default function ClaimVerifierPage() {
                     <cfg.icon className={`w-10 h-10 sm:w-8 sm:h-8 ${cfg.color}`} />
                     <div>
                       <p className={`text-2xl font-black ${cfg.color}`}>{cfg.label}</p>
-                      <p className="text-slate-500 text-sm mt-1 sm:mt-0.5 font-mono">"{result.claim.slice(0, 60)}{result.claim.length > 60 ? "..." : ""}"</p>
+                      <p className="text-slate-500 text-sm mt-1 sm:mt-0.5 font-mono">&ldquo;{result.claim.slice(0, 60)}{result.claim.length > 60 ? "..." : ""}&rdquo;</p>
                     </div>
                   </div>
                   <div className="text-center bg-black/20 sm:bg-transparent rounded-lg p-3 sm:p-0 w-full sm:w-auto">

@@ -79,7 +79,7 @@ export default function ExtensionPage() {
               <div className="space-y-1.5">
                 <p className="text-xs text-orange-400 font-semibold">⚠ 3 suspicious sentences found</p>
                 <div className="text-xs text-slate-400 bg-red-500/8 rounded p-2 border border-red-500/20">
-                  "...this shocking revelation was suppressed by..."
+                  &ldquo;...this shocking revelation was suppressed by...&rdquo;
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -116,7 +116,7 @@ export default function ExtensionPage() {
 
         {/* Features List */}
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card p-8 stat-card">
-          <h2 className="text-2xl font-bold mb-6 text-center">What's Included</h2>
+          <h2 className="text-2xl font-bold mb-6 text-center">What&apos;s Included</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {features.map((f, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
@@ -129,7 +129,7 @@ export default function ExtensionPage() {
           <div className="mt-8 text-center">
             <button className="btn-primary inline-flex items-center gap-2 px-10 py-3.5 text-base">
               <Puzzle className="w-5 h-5" />
-              Add to Chrome — It's Free
+              Add to Chrome — It&apos;s Free
             </button>
           </div>
         </motion.div>

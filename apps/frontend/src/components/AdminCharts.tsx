@@ -39,12 +39,23 @@ const accuracyTrend = [
   { day: "Sun", accuracy: 88.1 },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number | string;
+    color?: string;
+    fill?: string;
+  }>;
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass p-3 rounded-xl border border-white/10 text-xs">
       <p className="text-slate-400 mb-1.5 font-medium">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.name} style={{ color: p.color || p.fill }}>{p.name}: <strong>{p.value}</strong></p>
       ))}
     </div>

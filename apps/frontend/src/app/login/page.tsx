@@ -58,7 +58,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-slate-500 text-sm mt-6">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-cyan-400 hover:text-cyan-300 transition-colors">Create one</Link>
         </p>
       </motion.div>
