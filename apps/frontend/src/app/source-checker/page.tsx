@@ -63,7 +63,10 @@ export default function SourceCheckerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain: cleaned }),
       });
-      if (!response.ok) throw new Error("Source check failed. Please try again.");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Source check failed. Please try again.");
+      }
       const res: SourceResult = await response.json();
       setResult(res);
     } catch (err) {

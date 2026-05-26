@@ -124,7 +124,10 @@ export default function AnalyzePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
       });
-      if (!response.ok) throw new Error("Analysis failed. Please try again.");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Analysis failed. Please try again.");
+      }
       const res: AnalysisResult = await response.json();
       setResult(res);
     } catch (err) {

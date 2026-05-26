@@ -29,6 +29,47 @@ async function webSearch(query: string, tavilyKey: string): Promise<string> {
   }
 }
 
+// ─── Simple regex HTML scraper ─────────────────────────────────────────────────
+async function scrapeUrl(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+
+    // Remove scripts and styles
+    let cleaned = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+
+    // Extract text from <p> tags
+    const pMatches = cleaned.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const paragraphs = pMatches
+      .map(p => p.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim())
+      .filter(t => t.length > 30);
+
+    if (paragraphs.length === 0) {
+      // Fallback: extract from body
+      const bodyMatch = cleaned.match(/<body\b[^>]*>([\s\S]*?)<\/body>/gi);
+      if (bodyMatch) {
+        return bodyMatch[0]
+          .replace(/<[^>]*>/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 8000);
+      }
+    }
+
+    return paragraphs.join("\n\n").slice(0, 8000);
+  } catch (error) {
+    console.error("Scraper helper error:", error);
+    return "";
+  }
+}
+
 // ─── Main route ───────────────────────────────────────────────────────────────
 export async function POST(request: Request) {
   try {
@@ -36,6 +77,25 @@ export async function POST(request: Request) {
 
     if (!text || text.trim().length < 10) {
       return NextResponse.json({ error: "Text is too short to analyze." }, { status: 400 });
+    }
+
+    let articleText = text;
+    let isUrl = false;
+    try {
+      const trimmed = text.trim();
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        new URL(trimmed);
+        isUrl = true;
+      }
+    } catch (_) {}
+
+    if (isUrl) {
+      const scraped = await scrapeUrl(text.trim());
+      if (scraped && scraped.trim().length > 50) {
+        articleText = scraped;
+      } else {
+        return NextResponse.json({ error: "Could not extract readable article text from the URL. Please verify the link is accessible." }, { status: 400 });
+      }
     }
 
     const groqKey = process.env.GROQ_API_KEY;
@@ -62,7 +122,7 @@ export async function POST(request: Request) {
               role: "system",
               content: "Extract the single most important factual claim from the article text. Return ONLY a short search query (max 15 words) suitable for Google. Return nothing else.",
             },
-            { role: "user", content: text.slice(0, 1000) },
+            { role: "user", content: articleText.slice(0, 1000) },
           ],
           temperature: 0,
           max_tokens: 60,
@@ -120,8 +180,8 @@ Respond STRICTLY in JSON format with exactly these keys:
 Do NOT output anything other than the JSON object.`;
 
     const userContent = webEvidence
-      ? `ARTICLE TEXT:\n${text}\n\n---\nWEB SEARCH EVIDENCE:\n${webEvidence}\n\n---\nNow analyze the article using the web evidence above. If web evidence contradicts the article, mark it FAKE.`
-      : `ARTICLE TEXT:\n${text}\n\n---\nNo web evidence available. Be extra skeptical in your analysis.`;
+      ? `ARTICLE TEXT:\n${articleText}\n\n---\nWEB SEARCH EVIDENCE:\n${webEvidence}\n\n---\nNow analyze the article using the web evidence above. If web evidence contradicts the article, mark it FAKE.`
+      : `ARTICLE TEXT:\n${articleText}\n\n---\nNo web evidence available. Be extra skeptical in your analysis.`;
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
