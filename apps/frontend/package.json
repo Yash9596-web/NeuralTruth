@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
     "build:cloudflare": "npx opennextjs-cloudflare build",
     "deploy": "npx opennextjs-cloudflare deploy",
     "preview": "npx wrangler dev"
