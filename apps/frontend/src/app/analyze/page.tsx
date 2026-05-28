@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Link2, AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp, Shield, Activity, Brain, FileText } from "lucide-react";
+import { Zap, Link2, AlertTriangle, XCircle, ChevronDown, ChevronUp, Shield, Activity, Brain, FileText } from "lucide-react";
 
 type TabType = "text" | "url";
 type Prediction = "FAKE" | "REAL" | null;
