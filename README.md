@@ -1,5 +1,7 @@
 # NeuralTruth — AI Fake News Detection Platform
 
+[![Live Preview](https://img.shields.io/badge/Live%20Preview-Cloudflare%20Workers-00d4ff?style=for-the-badge&logo=cloudflare&logoColor=white)](https://neuraltruth-frontend.uniquetechytofficial.workers.dev/)
+
 A production-grade, end-to-end platform for detecting fake news, scoring source credibility, and verifying claims using fine-tuned BERT transformer models.
 
 ## 🌟 Features
@@ -104,4 +106,5 @@ python scripts/load_test.py
 *Current benchmark: 0.18s avg latency under 50 concurrent req/sec.*
 
 ## 📦 CI/CD
-This repository includes a GitHub Actions pipeline (`.github/workflows/deploy.yml`) configured for automated testing and deployment to Vercel (Frontend) and Railway (Backend).
+
+This repository includes a GitHub Actions pipeline (`.github/workflows/deploy-cloudflare.yml`) configured for automated testing and deployment to Cloudflare Workers. Every commit pushed to the `main` branch automatically builds and deploys the latest version to the live preview: https://neuraltruth-frontend.uniquetechytofficial.workers.dev/
