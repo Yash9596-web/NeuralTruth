@@ -15,38 +15,48 @@ function resolveGroqKeys(cfEnv: Record<string, string>): string[] {
   return keys.filter(Boolean);
 }
 
-// ─── Groq call with automatic key fallback on rate-limit ─────────────────────
+// ─── Groq call: key fallback + model fallback on rate-limit ───────────────────
 async function groqFetch(
   keys: string[],
-  payload: object
-): Promise<{ ok: boolean; data?: object; error?: string }> {
-  for (const key of keys) {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  payload: object,
+  fallbackModel?: string
+): Promise<{ ok: boolean; data?: object; error?: string; usedFallback?: boolean }> {
+  const primaryModel = (payload as { model: string }).model;
+  const models = fallbackModel ? [primaryModel, fallbackModel] : [primaryModel];
 
-    if (res.ok) {
-      const data = await res.json();
-      return { ok: true, data };
+  for (const model of models) {
+    const isFallback = model !== primaryModel;
+    for (const key of keys) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, model }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, data, usedFallback: isFallback };
+      }
+
+      const errText = await res.text();
+      let errMsg = errText;
+      try { errMsg = JSON.parse(errText)?.error?.message || errText; } catch (_) {}
+
+      if (res.status === 429) {
+        console.warn(`Rate-limited on model ${model}: ${errMsg.slice(0, 80)}`);
+        continue; // try next key
+      }
+
+      return { ok: false, error: errMsg.slice(0, 300) }; // non-429 error, stop
     }
-
-    const errText = await res.text();
-    let errMsg = errText;
-    try { errMsg = JSON.parse(errText)?.error?.message || errText; } catch (_) {}
-
-    // Only fall through to next key on rate-limit (429) errors
-    if (res.status === 429) {
-      console.warn(`Groq key rotated due to rate limit: ${errMsg.slice(0, 100)}`);
-      continue;
-    }
-
-    // For any other error (auth, bad request, etc.) return immediately
-    return { ok: false, error: errMsg.slice(0, 300) };
+    // All keys exhausted on this model — try next model
+    console.warn(`All keys exhausted on ${model}, trying fallback model...`);
   }
 
-  return { ok: false, error: "All Groq API keys have reached their rate limit. Please try again later." };
+  return {
+    ok: false,
+    error: "Daily token limit reached. Quota resets every 24 hours — please try again later, or visit https://console.groq.com to upgrade.",
+  };
 }
 
 // ─── Tavily web search helper ─────────────────────────────────────────────────
@@ -226,16 +236,20 @@ Do NOT output anything other than the JSON object.`;
       ? `ARTICLE TEXT:\n${articleText}\n\n---\nWEB SEARCH EVIDENCE:\n${webEvidence}\n\n---\nNow analyze the article using the web evidence above. If web evidence contradicts the article, mark it FAKE.`
       : `ARTICLE TEXT:\n${articleText}\n\n---\nNo web evidence available. Be extra skeptical in your analysis.`;
 
-    const analysisResult = await groqFetch(groqKeys, {
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.05,
-      response_format: { type: "json_object" },
-      max_tokens: 600,
-    });
+    const analysisResult = await groqFetch(
+      groqKeys,
+      {
+        model: "llama-3.3-70b-versatile", // primary: best quality
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.05,
+        response_format: { type: "json_object" },
+        max_tokens: 600,
+      },
+      "llama-3.1-8b-instant" // fallback: 500K tokens/day when 70B is exhausted
+    );
 
     if (!analysisResult.ok) {
       return NextResponse.json({ error: `Analysis failed: ${analysisResult.error}` }, { status: 500 });
