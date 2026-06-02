@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // ─── Tavily web search helper ─────────────────────────────────────────────────
 async function webSearch(query: string, tavilyKey: string): Promise<string> {
@@ -98,12 +99,18 @@ export async function POST(request: Request) {
       }
     }
 
-    const groqKey = process.env.GROQ_API_KEY;
+    // Resolve env vars: Cloudflare Workers bindings take priority, process.env works locally
+    let cfEnv: Record<string, string> = {};
+    try {
+      const ctx = await getCloudflareContext({ async: true });
+      cfEnv = (ctx.env ?? {}) as Record<string, string>;
+    } catch (_) {}
+    const groqKey = cfEnv.GROQ_API_KEY || process.env.GROQ_API_KEY;
     if (!groqKey) {
-      return NextResponse.json({ error: "GROQ_API_KEY is not configured." }, { status: 500 });
+      return NextResponse.json({ error: "GROQ_API_KEY is not configured on this deployment." }, { status: 500 });
     }
 
-    const tavilyKey = process.env.TAVILY_API_KEY || "";
+    const tavilyKey = cfEnv.TAVILY_API_KEY || process.env.TAVILY_API_KEY || "";
 
     // ── Step 1: Extract key claims for web search ──────────────────────────
     let webEvidence = "";

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(request: Request) {
   try {
@@ -8,9 +9,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Domain is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    // Resolve env vars: Cloudflare Workers bindings take priority, process.env works locally
+    let cfEnv: Record<string, string> = {};
+    try {
+      const ctx = await getCloudflareContext({ async: true });
+      cfEnv = (ctx.env ?? {}) as Record<string, string>;
+    } catch (_) {}
+    const apiKey = cfEnv.GROQ_API_KEY || process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "GROQ_API_KEY is not set" }, { status: 500 });
+      return NextResponse.json({ error: "GROQ_API_KEY is not configured on this deployment." }, { status: 500 });
     }
 
     const systemPrompt = `You are a cybersecurity and journalism credibility expert. Analyze the news domain provided.
