@@ -102,9 +102,12 @@ export async function POST(request: Request) {
     // Resolve env vars: Cloudflare Workers bindings take priority, process.env works locally
     let cfEnv: Record<string, string> = {};
     try {
-      const ctx = await getCloudflareContext({ async: true });
+      // getCloudflareContext() is synchronous in @opennextjs/cloudflare v1.x
+      const ctx = getCloudflareContext();
       cfEnv = (ctx.env ?? {}) as Record<string, string>;
-    } catch (_) {}
+    } catch (_) {
+      // Falls back to process.env (works locally and with nodejs_compat [vars])
+    }
     const groqKey = cfEnv.GROQ_API_KEY || process.env.GROQ_API_KEY;
     if (!groqKey) {
       return NextResponse.json({ error: "GROQ_API_KEY is not configured on this deployment." }, { status: 500 });
@@ -211,7 +214,9 @@ Do NOT output anything other than the JSON object.`;
     if (!response.ok) {
       const errText = await response.text();
       console.error("Groq API error:", errText);
-      return NextResponse.json({ error: "Failed to analyze text. Please try again." }, { status: 500 });
+      let groqMsg = "Groq API error";
+      try { groqMsg = JSON.parse(errText)?.error?.message || errText.slice(0, 300); } catch (_) { groqMsg = errText.slice(0, 300); }
+      return NextResponse.json({ error: `Analysis failed: ${groqMsg}` }, { status: 500 });
     }
 
     const data = await response.json();

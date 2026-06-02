@@ -12,9 +12,11 @@ export async function POST(request: Request) {
     // Resolve env vars: Cloudflare Workers bindings take priority, process.env works locally
     let cfEnv: Record<string, string> = {};
     try {
-      const ctx = await getCloudflareContext({ async: true });
+      const ctx = getCloudflareContext();
       cfEnv = (ctx.env ?? {}) as Record<string, string>;
-    } catch (_) {}
+    } catch (_) {
+      // Falls back to process.env
+    }
     const apiKey = cfEnv.GROQ_API_KEY || process.env.GROQ_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "GROQ_API_KEY is not configured on this deployment." }, { status: 500 });
