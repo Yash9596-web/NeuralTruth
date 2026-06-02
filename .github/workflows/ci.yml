@@ -34,24 +34,16 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22.x'
           cache: 'npm'
           cache-dependency-path: 'apps/frontend/package-lock.json'
 
       - name: Install dependencies
-        run: |
-          cd apps/frontend
-          npm install
+        working-directory: apps/frontend
+        run: npm install
 
-      - name: Lint
-        run: |
-          cd apps/frontend
-          npm run lint
-
-      - name: Build Next.js
-        run: |
-          cd apps/frontend
-          npm run build
-
+      - name: Build for Cloudflare (validates full build)
+        working-directory: apps/frontend
+        run: npx opennextjs-cloudflare build
