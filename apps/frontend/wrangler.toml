@@ -9,7 +9,14 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = ".open-next/assets"
 
-# Environment variables available to the Worker at runtime
-[vars]
-GROQ_API_KEY = "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"
-TAVILY_API_KEY = "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"
+# ── API Keys ──────────────────────────────────────────────────────────────────
+# All secrets are managed via Cloudflare Workers dashboard or wrangler CLI.
+# NEVER commit actual key values here.
+#
+# Required secrets (set in Cloudflare dashboard → Workers → neuraltruth-frontend → Settings → Variables):
+#   GROQ_API_KEY1   — Primary Groq API key
+#   GROQ_API_KEY    — Backup Groq API key (optional)
+#   TAVILY_API_KEY  — Tavily web search key (optional, enables web verification)
+#
+# To set via CLI:
+#   npx wrangler secret put GROQ_API_KEY1 --name neuraltruth-frontend

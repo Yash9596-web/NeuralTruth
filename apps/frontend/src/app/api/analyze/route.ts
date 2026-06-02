@@ -1,6 +1,54 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+// ─── Resolve all available Groq API keys ──────────────────────────────────────
+function resolveGroqKeys(cfEnv: Record<string, string>): string[] {
+  const keys = [
+    // GROQ_API_KEY1 = user's new key (fresh quota) — try first
+    cfEnv.GROQ_API_KEY1  || process.env.GROQ_API_KEY1  || "",
+    // GROQ_API_KEY = original key (may be exhausted) — fallback
+    cfEnv.GROQ_API_KEY   || process.env.GROQ_API_KEY   || "",
+    // Extra slots for future keys
+    cfEnv.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_2 || "",
+    cfEnv.GROQ_API_KEY_3 || process.env.GROQ_API_KEY_3 || "",
+  ];
+  return keys.filter(Boolean);
+}
+
+// ─── Groq call with automatic key fallback on rate-limit ─────────────────────
+async function groqFetch(
+  keys: string[],
+  payload: object
+): Promise<{ ok: boolean; data?: object; error?: string }> {
+  for (const key of keys) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, data };
+    }
+
+    const errText = await res.text();
+    let errMsg = errText;
+    try { errMsg = JSON.parse(errText)?.error?.message || errText; } catch (_) {}
+
+    // Only fall through to next key on rate-limit (429) errors
+    if (res.status === 429) {
+      console.warn(`Groq key rotated due to rate limit: ${errMsg.slice(0, 100)}`);
+      continue;
+    }
+
+    // For any other error (auth, bad request, etc.) return immediately
+    return { ok: false, error: errMsg.slice(0, 300) };
+  }
+
+  return { ok: false, error: "All Groq API keys have reached their rate limit. Please try again later." };
+}
+
 // ─── Tavily web search helper ─────────────────────────────────────────────────
 async function webSearch(query: string, tavilyKey: string): Promise<string> {
   try {
@@ -41,26 +89,19 @@ async function scrapeUrl(url: string): Promise<string> {
     if (!res.ok) return "";
     const html = await res.text();
 
-    // Remove scripts and styles
     let cleaned = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
 
-    // Extract text from <p> tags
     const pMatches = cleaned.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi) || [];
     const paragraphs = pMatches
       .map(p => p.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim())
       .filter(t => t.length > 30);
 
     if (paragraphs.length === 0) {
-      // Fallback: extract from body
       const bodyMatch = cleaned.match(/<body\b[^>]*>([\s\S]*?)<\/body>/gi);
       if (bodyMatch) {
-        return bodyMatch[0]
-          .replace(/<[^>]*>/g, "")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 8000);
+        return bodyMatch[0].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 8000);
       }
     }
 
@@ -99,49 +140,41 @@ export async function POST(request: Request) {
       }
     }
 
-    // Resolve env vars: Cloudflare Workers bindings take priority, process.env works locally
+    // ── Resolve API keys ───────────────────────────────────────────────────────
     let cfEnv: Record<string, string> = {};
     try {
-      // getCloudflareContext() is synchronous in @opennextjs/cloudflare v1.x
       const ctx = getCloudflareContext();
       cfEnv = (ctx.env ?? {}) as Record<string, string>;
     } catch (_) {
-      // Falls back to process.env (works locally and with nodejs_compat [vars])
+      // Falls back to process.env (local dev / nodejs_compat)
     }
-    const groqKey = cfEnv.GROQ_API_KEY || process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      return NextResponse.json({ error: "GROQ_API_KEY is not configured on this deployment." }, { status: 500 });
+
+    const groqKeys = resolveGroqKeys(cfEnv);
+    if (groqKeys.length === 0) {
+      return NextResponse.json({ error: "No Groq API keys configured on this deployment." }, { status: 500 });
     }
 
     const tavilyKey = cfEnv.TAVILY_API_KEY || process.env.TAVILY_API_KEY || "";
 
-    // ── Step 1: Extract key claims for web search ──────────────────────────
+    // ── Step 1: Extract key claim for web search (uses fast/cheap 8B model) ───
     let webEvidence = "";
     if (tavilyKey) {
-      // Ask Groq to extract the main claim to search for
-      const claimRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content: "Extract the single most important factual claim from the article text. Return ONLY a short search query (max 15 words) suitable for Google. Return nothing else.",
-            },
-            { role: "user", content: articleText.slice(0, 1000) },
-          ],
-          temperature: 0,
-          max_tokens: 60,
-        }),
+      const claimResult = await groqFetch(groqKeys, {
+        model: "llama-3.1-8b-instant",   // ← smaller model, saves ~10x tokens
+        messages: [
+          {
+            role: "system",
+            content: "Extract the single most important factual claim from the article text. Return ONLY a short search query (max 15 words) suitable for Google. Return nothing else.",
+          },
+          { role: "user", content: articleText.slice(0, 800) },
+        ],
+        temperature: 0,
+        max_tokens: 50,
       });
 
-      if (claimRes.ok) {
-        const claimData = await claimRes.json();
-        const searchQuery = claimData.choices?.[0]?.message?.content?.trim();
+      if (claimResult.ok && claimResult.data) {
+        const d = claimResult.data as { choices: { message: { content: string } }[] };
+        const searchQuery = d.choices?.[0]?.message?.content?.trim();
         if (searchQuery) {
           webEvidence = await webSearch(searchQuery, tavilyKey);
         }
@@ -193,37 +226,25 @@ Do NOT output anything other than the JSON object.`;
       ? `ARTICLE TEXT:\n${articleText}\n\n---\nWEB SEARCH EVIDENCE:\n${webEvidence}\n\n---\nNow analyze the article using the web evidence above. If web evidence contradicts the article, mark it FAKE.`
       : `ARTICLE TEXT:\n${articleText}\n\n---\nNo web evidence available. Be extra skeptical in your analysis.`;
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${groqKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        temperature: 0.05,
-        response_format: { type: "json_object" },
-        max_tokens: 600,
-      }),
+    const analysisResult = await groqFetch(groqKeys, {
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.05,
+      response_format: { type: "json_object" },
+      max_tokens: 600,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Groq API error:", errText);
-      let groqMsg = "Groq API error";
-      try { groqMsg = JSON.parse(errText)?.error?.message || errText.slice(0, 300); } catch (_) { groqMsg = errText.slice(0, 300); }
-      return NextResponse.json({ error: `Analysis failed: ${groqMsg}` }, { status: 500 });
+    if (!analysisResult.ok) {
+      return NextResponse.json({ error: `Analysis failed: ${analysisResult.error}` }, { status: 500 });
     }
 
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    const d = analysisResult.data as { choices: { message: { content: string } }[] };
+    const content = d.choices[0].message.content;
     const parsed = JSON.parse(content);
 
-    // Validate structure
     if (!parsed.prediction || !["FAKE", "REAL"].includes(parsed.prediction)) {
       throw new Error("Invalid model response structure");
     }
