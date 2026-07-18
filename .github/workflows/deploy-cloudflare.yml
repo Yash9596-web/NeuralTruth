@@ -21,11 +21,11 @@ jobs:
           node-version: '22.x'
 
       - name: Install dependencies
-        working-directory: apps/frontend
+        working-directory: 09_code/frontend
         run: npm install
 
       - name: Build for Cloudflare
-        working-directory: apps/frontend
+        working-directory: 09_code/frontend
         run: npx opennextjs-cloudflare build
 
       - name: Deploy to Cloudflare Workers
@@ -33,4 +33,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/frontend
+          workingDirectory: 09_code/frontend

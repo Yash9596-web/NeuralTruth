@@ -1,7 +1,7 @@
-# Model Approach Notes
+# Model Approach
 
 ## Architecture
-- **Model:** `distilroberta-base` (HuggingFace)
+- **Model:** `distilroberta-base` (Groq Model)
 - **Task:** Binary sequence classification (0=REAL, 1=FAKE)
 - **Classification head:** Linear layer on top of [CLS] token output
 - **Parameters:** ~82M (vs. 110M for full BERT-base)
