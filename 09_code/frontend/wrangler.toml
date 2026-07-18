@@ -1,0 +1,22 @@
+#:schema node_modules/wrangler/config-schema.json
+
+name = "neuraltruth-frontend"
+main = ".open-next/worker.js"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets served from the .open-next/assets directory
+[assets]
+directory = ".open-next/assets"
+
+# ── API Keys ──────────────────────────────────────────────────────────────────
+# All secrets are managed via Cloudflare Workers dashboard or wrangler CLI.
+# NEVER commit actual key values here.
+#
+# Required secrets (set in Cloudflare dashboard → Workers → neuraltruth-frontend → Settings → Variables):
+#   GROQ_API_KEY1   — Primary Groq API key
+#   GROQ_API_KEY    — Backup Groq API key (optional)
+#   TAVILY_API_KEY  — Tavily web search key (optional, enables web verification)
+#
+# To set via CLI:
+#   npx wrangler secret put GROQ_API_KEY1 --name neuraltruth-frontend
